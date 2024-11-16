@@ -98,5 +98,30 @@ func (s ScanMode) String() string {
 		desc = append(desc, "consecutive i")
 	}
 
+	// Row scanning
+	if s.HasOppositeRows() {
+		desc = append(desc, "opposite rows")
+	} else {
+		desc = append(desc, "same direction rows")
+	}
+
+	// Offset information
+	if s.HasOddOffset() {
+		desc = append(desc, "odd rows offset")
+	}
+	if s.HasEvenOffset() {
+		desc = append(desc, "even rows offset")
+	}
+	if s.HasJOffset() {
+		desc = append(desc, "j-direction offset")
+	}
+
+	// Point arrangement
+	if s.HasOffsetPoints() {
+		desc = append(desc, "offset points")
+	} else {
+		desc = append(desc, "regular points")
+	}
+
 	return strings.Join(desc, ", ")
 }
