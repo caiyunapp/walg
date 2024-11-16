@@ -102,7 +102,17 @@ func (g *regular) GridPoint(index int) (lat, lon float64) {
 }
 
 func (g *regular) GridIndexFromIndices(latIdx, lonIdx int) int {
-	return latIdx*g.longitudesSize() + lonIdx
+	if g.scanMode.IsConsecutiveJ() {
+		if g.scanMode.HasOppositeRows() && lonIdx%2 == 1 {
+			latIdx = g.latitudesSize() - 1 - latIdx
+		}
+		return lonIdx*g.latitudesSize() + latIdx
+	} else {
+		if g.scanMode.HasOppositeRows() && latIdx%2 == 1 {
+			lonIdx = g.longitudesSize() - 1 - lonIdx
+		}
+		return latIdx*g.longitudesSize() + lonIdx
+	}
 }
 
 func (g *regular) Latitudes() []float64 {

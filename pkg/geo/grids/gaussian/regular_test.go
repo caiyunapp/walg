@@ -160,6 +160,26 @@ func TestRegular_GetLatitudeIndex(t *testing.T) {
 				{i: 95, v: 88.572169},
 			},
 		},
+		{
+			n: 48,
+			m: grids.ScanModePositiveJ | grids.ScanModeOppositeRows,
+			indices: []idx{
+				{i: 0, v: -88.572169},
+				{i: 1, v: -86.722531},
+				{i: 48, v: 0},
+				{i: 95, v: 88.572169},
+			},
+		},
+		{
+			n: 48,
+			m: grids.ScanModeNegativeJ | grids.ScanModeJOffset,
+			indices: []idx{
+				{i: 0, v: 88.572169},
+				{i: 1, v: 86.722531},
+				{i: 47, v: 0},
+				{i: 95, v: -88.572169},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -204,6 +224,36 @@ func TestRegular_GetLongitudeIndex(t *testing.T) {
 				{i: 191, v: 0.0},
 			},
 		},
+		{
+			n: 48,
+			m: grids.ScanModePositiveI | grids.ScanModeOppositeRows,
+			indices: []idx{
+				{i: 0, v: 0.0},
+				{i: 1, v: 1.875},
+				{i: 96, v: 180.0},
+				{i: 191, v: 358.125},
+			},
+		},
+		{
+			n: 48,
+			m: grids.ScanModeNegativeI | grids.ScanModeOddOffset,
+			indices: []idx{
+				{i: 0, v: 358.125},
+				{i: 1, v: 356.25},
+				{i: 95, v: 180.0},
+				{i: 191, v: 0.0},
+			},
+		},
+		{
+			n: 48,
+			m: grids.ScanModePositiveI | grids.ScanModeEvenOffset,
+			indices: []idx{
+				{i: 0, v: 0.0},
+				{i: 1, v: 1.875},
+				{i: 96, v: 180.0},
+				{i: 191, v: 358.125},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -218,48 +268,229 @@ func TestRegular_GetLongitudeIndex(t *testing.T) {
 }
 
 func TestRegular_GridIndex(t *testing.T) {
-	g := gaussian.NewRegular(48)
-
-	tests := []struct {
+	type testCase struct {
 		name     string
 		lat, lon float64
 		want     int
+	}
+
+	tests := []struct {
+		mode  grids.ScanMode
+		cases []testCase
 	}{
 		{
-			name: "first point",
-			lat:  88.572169,
-			lon:  0.0,
-			want: 0,
+			// 默认模式 (ScanModePositiveI):
+			// - 从北到南扫描纬度 (负 j 方向)
+			// - 从西到东扫描经度 (正 i 方向)
+			// - 连续 i 方向 (同一纬度圈上的点连续存储)
+			// 索引计算: index = latIdx * longitudesSize + lonIdx
+			mode: grids.ScanModePositiveI,
+			cases: []testCase{
+				{
+					name: "first point (北极点附近，本初子午线)",
+					lat:  88.572169, // 最北纬度
+					lon:  0.0,       // 最西经度
+					want: 0,         // latIdx(0) * 192 + lonIdx(0) = 0
+				},
+				{
+					name: "second latitude, first longitude",
+					lat:  86.722531, // 第二个纬度
+					lon:  0.0,       // 最西经度
+					want: 192,       // latIdx(1) * 192 + lonIdx(0) = 192
+				},
+				{
+					name: "first latitude, second longitude",
+					lat:  88.572169, // 最北纬度
+					lon:  1.875,     // 第二个经度 (360°/192)
+					want: 1,         // latIdx(0) * 192 + lonIdx(1) = 1
+				},
+				{
+					name: "middle point (赤道附近)",
+					lat:  0.0,         // 赤道
+					lon:  180.0,       // 180度经线
+					want: 47*192 + 96, // latIdx(47) * 192 + lonIdx(96)
+				},
+				{
+					name: "last point (南极点附近，最后一个经度)",
+					lat:  -88.572169,   // 最南纬度
+					lon:  358.125,      // 最东经度 (360° - 1.875°)
+					want: 95*192 + 191, // latIdx(95) * 192 + lonIdx(191)
+				},
+			},
 		},
 		{
-			name: "second latitude, first longitude",
-			lat:  86.722531,
-			lon:  0.0,
-			want: 192, // longitudesSize = 192 for F48
+			// 连续 J 模式 (ScanModeConsecutiveJ):
+			// - 同一经度线上的点连续存储
+			// - 先存储一条经度线上的所有纬度点，再移动到下一个经度
+			// 索引计算: index = lonIdx * latitudesSize + latIdx
+			mode: grids.ScanModeConsecutiveJ,
+			cases: []testCase{
+				{
+					name: "first point",
+					lat:  88.572169, // 最北纬度
+					lon:  0.0,       // 最西经度
+					want: 0,         // lonIdx(0) * 96 + latIdx(0) = 0
+				},
+				{
+					name: "second latitude, first longitude",
+					lat:  86.722531, // 第二个纬度
+					lon:  0.0,       // 最西经度
+					want: 1,         // lonIdx(0) * 96 + latIdx(1) = 1
+				},
+				{
+					name: "first latitude, second longitude",
+					lat:  88.572169, // 最北纬度
+					lon:  1.875,     // 第二个经度
+					want: 96,        // lonIdx(1) * 96 + latIdx(0) = 96
+				},
+				{
+					name: "middle point",
+					lat:  0.0,        // 赤道
+					lon:  180.0,      // 180度经线
+					want: 96*96 + 47, // lonIdx(96) * 96 + latIdx(47)
+				},
+				{
+					name: "last point",
+					lat:  -88.572169,  // 最南纬度
+					lon:  358.125,     // 最东经度
+					want: 191*96 + 95, // lonIdx(191) * 96 + latIdx(95)
+				},
+			},
 		},
 		{
-			name: "first latitude, second longitude",
-			lat:  88.572169,
-			lon:  1.875, // 360/192 = 1.875 (degrees per longitude step in F48)
-			want: 1,
+			// 正 J 方向模式 (ScanModePositiveJ):
+			// - 从南到北扫描纬度 (正 j 方向)
+			// - 从西到东扫描经度 (正 i 方向)
+			// - 纬度索引被反转
+			mode: grids.ScanModePositiveJ,
+			cases: []testCase{
+				{
+					name: "first point (最北点变成最后一个纬度索引)",
+					lat:  88.572169,  // 最北纬度
+					lon:  0.0,        // 最西经度
+					want: 95*192 + 0, // 反转后的latIdx(95) * 192 + lonIdx(0)
+				},
+				{
+					name: "middle point",
+					lat:  0.0,         // 赤道
+					lon:  180.0,       // 180度经线
+					want: 48*192 + 96, // 反转后的latIdx(48) * 192 + lonIdx(96)
+				},
+				{
+					name: "last point",
+					lat:  -88.572169,  // 最南纬度
+					lon:  358.125,     // 最东经度
+					want: 0*192 + 191, // 反转后的latIdx(0) * 192 + lonIdx(191)
+				},
+			},
 		},
 		{
-			name: "middle point",
-			lat:  0.0,
-			lon:  180.0,
-			want: 47*192 + 96, // around middle latitude index * longitudesSize + middle longitude index
+			// 负 I 方向模式 (ScanModeNegativeI):
+			// - 从北到南扫描纬度 (负 j 方向)
+			// - 从东到西扫描经度 (负 i 方向)
+			// - 经度索引被反转
+			mode: grids.ScanModeNegativeI,
+			cases: []testCase{
+				{
+					name: "first point",
+					lat:  88.572169,   // 最北纬度
+					lon:  0.0,         // 最西经度（变成最后一个经度索引）
+					want: 0*192 + 191, // latIdx(0) * 192 + 反转后的lonIdx(191)
+				},
+				{
+					name: "middle point",
+					lat:  0.0,         // 赤道
+					lon:  180.0,       // 180度经线
+					want: 47*192 + 95, // latIdx(47) * 192 + 反转后的lonIdx(95)
+				},
+				{
+					name: "last point",
+					lat:  -88.572169, // 最南纬度
+					lon:  358.125,    // 最东经度（变成第一个经度索引）
+					want: 95*192 + 0, // latIdx(95) * 192 + 反转后的lonIdx(0)
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.mode.String(), func(t *testing.T) {
+			g := gaussian.NewRegular(48, gaussian.WithScanMode(tt.mode))
+
+			for _, tc := range tt.cases {
+				t.Run(tc.name, func(t *testing.T) {
+					got := g.GridIndex(tc.lat, tc.lon)
+					assert.Equal(t, tc.want, got,
+						"lat: %v, lon: %v, mode: %v", tc.lat, tc.lon, tt.mode)
+				})
+			}
+		})
+	}
+}
+
+func TestRegular_GridIndexFromIndices(t *testing.T) {
+	tests := []struct {
+		name   string
+		n      int
+		mode   grids.ScanMode
+		latIdx int
+		lonIdx int
+		want   int
+	}{
+		{
+			name:   "consecutive i (default)",
+			n:      48,
+			mode:   grids.ScanModePositiveI,
+			latIdx: 1,
+			lonIdx: 2,
+			want:   1*192 + 2, // latIdx * longitudesSize + lonIdx
 		},
 		{
-			name: "last point",
-			lat:  -88.572169,
-			lon:  358.125,      // 360 - 1.875
-			want: 95*192 + 191, // (latitudesSize-1) * longitudesSize + (longitudesSize-1)
+			name:   "consecutive j",
+			n:      48,
+			mode:   grids.ScanModeConsecutiveJ,
+			latIdx: 1,
+			lonIdx: 2,
+			want:   2*96 + 1, // lonIdx * latitudesSize + latIdx
+		},
+		{
+			name:   "consecutive i with opposite rows - even row",
+			n:      48,
+			mode:   grids.ScanModePositiveI | grids.ScanModeOppositeRows,
+			latIdx: 0,
+			lonIdx: 2,
+			want:   0*192 + 2, // even row - normal order
+		},
+		{
+			name:   "consecutive i with opposite rows - odd row",
+			n:      48,
+			mode:   grids.ScanModePositiveI | grids.ScanModeOppositeRows,
+			latIdx: 1,
+			lonIdx: 2,
+			want:   1*192 + (191 - 2), // odd row - reverse longitude order
+		},
+		{
+			name:   "consecutive j with opposite rows - even column",
+			n:      48,
+			mode:   grids.ScanModeConsecutiveJ | grids.ScanModeOppositeRows,
+			latIdx: 1,
+			lonIdx: 0,
+			want:   0*96 + 1, // even column - normal order
+		},
+		{
+			name:   "consecutive j with opposite rows - odd column",
+			n:      48,
+			mode:   grids.ScanModeConsecutiveJ | grids.ScanModeOppositeRows,
+			latIdx: 1,
+			lonIdx: 1,
+			want:   1*96 + (95 - 1), // odd column - reverse latitude order
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := g.GridIndex(tt.lat, tt.lon)
+			g := gaussian.NewRegular(tt.n, gaussian.WithScanMode(tt.mode))
+			got := g.GridIndexFromIndices(tt.latIdx, tt.lonIdx)
 			assert.Equal(t, tt.want, got)
 		})
 	}
