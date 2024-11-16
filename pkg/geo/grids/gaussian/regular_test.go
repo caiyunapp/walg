@@ -19,6 +19,8 @@ func TestRegular_F48(t *testing.T) {
 
 	lats := g.Latitudes()
 	lons := g.Longitudes()
+	t.Logf("lats: %v", lats)
+	t.Logf("lons: %v", lons)
 
 	assert.Equal(t, 96, len(lats))
 	assert.Equal(t, 192, len(lons))
@@ -119,4 +121,74 @@ func TestRegular_F48(t *testing.T) {
 	assert.InDelta(t, -84.861970, lats[93], 1e-6)
 	assert.InDelta(t, -86.722531, lats[94], 1e-6)
 	assert.InDelta(t, -88.572169, lats[95], 1e-6)
+
+	assert.InDelta(t, 0.0, lons[0], 1e-6)
+	assert.InDelta(t, 1.875, lons[1], 1e-6)
+	assert.InDelta(t, 358.125, lons[191], 1e-6)
+}
+
+func TestRegular_GetLatitudeIndex(t *testing.T) {
+	g := NewRegular(48)
+
+	assert.Equal(t, 0, g.GetLatitudeIndex(88.572169))
+	assert.Equal(t, 1, g.GetLatitudeIndex(86.722531))
+	assert.Equal(t, 47, g.GetLatitudeIndex(0))
+	assert.Equal(t, 95, g.GetLatitudeIndex(-88.572169))
+}
+
+func TestRegular_GetLongitudeIndex(t *testing.T) {
+	g := NewRegular(48)
+
+	assert.Equal(t, 0, g.GetLongitudeIndex(0.0))
+	assert.Equal(t, 1, g.GetLongitudeIndex(1.875))
+	assert.Equal(t, 96, g.GetLongitudeIndex(180.0))
+	assert.Equal(t, 191, g.GetLongitudeIndex(358.125))
+}
+
+func TestRegular_GridIndex(t *testing.T) {
+	g := NewRegular(48)
+
+	tests := []struct {
+		name     string
+		lat, lon float64
+		want     int
+	}{
+		{
+			name: "first point",
+			lat:  88.572169,
+			lon:  0.0,
+			want: 0,
+		},
+		{
+			name: "second latitude, first longitude",
+			lat:  86.722531,
+			lon:  0.0,
+			want: 192, // longitudesSize = 192 for F48
+		},
+		{
+			name: "first latitude, second longitude",
+			lat:  88.572169,
+			lon:  1.875, // 360/192 = 1.875 (degrees per longitude step in F48)
+			want: 1,
+		},
+		{
+			name: "middle point",
+			lat:  0.0,
+			lon:  180.0,
+			want: 47*192 + 96, // around middle latitude index * longitudesSize + middle longitude index
+		},
+		{
+			name: "last point",
+			lat:  -88.572169,
+			lon:  358.125,      // 360 - 1.875
+			want: 95*192 + 191, // (latitudesSize-1) * longitudesSize + (longitudesSize-1)
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := g.GridIndex(tt.lat, tt.lon)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
