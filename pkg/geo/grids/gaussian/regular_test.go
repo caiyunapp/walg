@@ -261,7 +261,7 @@ func TestRegular_GetLongitudeIndex(t *testing.T) {
 			g := gaussian.NewRegular(tt.n, gaussian.WithScanMode(tt.m))
 
 			for _, idx := range tt.indices {
-				assert.Equal(t, idx.i, g.GetLongitudeIndex(idx.v))
+				assert.Equal(t, idx.i, g.GetLongitudeIndex(0, idx.v))
 			}
 		})
 	}

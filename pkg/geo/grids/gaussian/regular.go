@@ -50,7 +50,7 @@ func (g *regular) longitudesSize() int {
 
 func (g *regular) GridIndex(lat, lon float64) int {
 	latIdx := g.GetLatitudeIndex(lat)
-	lonIdx := g.GetLongitudeIndex(lon)
+	lonIdx := g.GetLongitudeIndex(lat, lon)
 
 	return g.GridIndexFromIndices(latIdx, lonIdx)
 }
@@ -71,7 +71,7 @@ func (g *regular) GetLatitudeIndex(lat float64) int {
 	return latIdx
 }
 
-func (g *regular) GetLongitudeIndex(lon float64) int {
+func (g *regular) GetLongitudeIndex(lat, lon float64) int {
 	lonIdxArr := grids.FindNearestIndices(lon, g.longitudes)
 	a, b := lonIdxArr[0], lonIdxArr[1]
 
