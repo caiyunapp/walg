@@ -1,13 +1,15 @@
-package gaussian
+package gaussian_test
 
 import (
 	"testing"
 
+	"github.com/scorix/walg/pkg/geo/grids"
+	"github.com/scorix/walg/pkg/geo/grids/gaussian"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRegular_F768(t *testing.T) {
-	g := NewRegular(768)
+	g := gaussian.NewRegular(768)
 
 	assert.Equal(t, 1536, len(g.Latitudes()))
 	assert.Equal(t, 3072, len(g.Longitudes()))
@@ -15,7 +17,7 @@ func TestRegular_F768(t *testing.T) {
 
 // https://confluence.ecmwf.int/display/UDOC/N48
 func TestRegular_F48(t *testing.T) {
-	g := NewRegular(48)
+	g := gaussian.NewRegular(48)
 
 	lats := g.Latitudes()
 	lons := g.Longitudes()
@@ -128,25 +130,95 @@ func TestRegular_F48(t *testing.T) {
 }
 
 func TestRegular_GetLatitudeIndex(t *testing.T) {
-	g := NewRegular(48)
+	type idx struct {
+		i int
+		v float64
+	}
 
-	assert.Equal(t, 0, g.GetLatitudeIndex(88.572169))
-	assert.Equal(t, 1, g.GetLatitudeIndex(86.722531))
-	assert.Equal(t, 47, g.GetLatitudeIndex(0))
-	assert.Equal(t, 95, g.GetLatitudeIndex(-88.572169))
+	tests := []struct {
+		n       int
+		m       grids.ScanMode
+		indices []idx
+	}{
+		{
+			n: 48,
+			m: grids.ScanModeNegativeJ,
+			indices: []idx{
+				{i: 0, v: 88.572169},
+				{i: 1, v: 86.722531},
+				{i: 47, v: 0},
+				{i: 95, v: -88.572169},
+			},
+		},
+		{
+			n: 48,
+			m: grids.ScanModePositiveJ,
+			indices: []idx{
+				{i: 0, v: -88.572169},
+				{i: 1, v: -86.722531},
+				{i: 48, v: 0},
+				{i: 95, v: 88.572169},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.m.String(), func(t *testing.T) {
+			g := gaussian.NewRegular(tt.n, gaussian.WithScanMode(tt.m))
+
+			for _, idx := range tt.indices {
+				assert.Equal(t, idx.i, g.GetLatitudeIndex(idx.v))
+			}
+		})
+	}
 }
 
 func TestRegular_GetLongitudeIndex(t *testing.T) {
-	g := NewRegular(48)
+	type idx struct {
+		i int
+		v float64
+	}
 
-	assert.Equal(t, 0, g.GetLongitudeIndex(0.0))
-	assert.Equal(t, 1, g.GetLongitudeIndex(1.875))
-	assert.Equal(t, 96, g.GetLongitudeIndex(180.0))
-	assert.Equal(t, 191, g.GetLongitudeIndex(358.125))
+	tests := []struct {
+		n       int
+		m       grids.ScanMode
+		indices []idx
+	}{
+		{
+			n: 48,
+			m: grids.ScanModePositiveI,
+			indices: []idx{
+				{i: 0, v: 0.0},
+				{i: 1, v: 1.875},
+				{i: 96, v: 180.0},
+				{i: 191, v: 358.125},
+			},
+		},
+		{
+			n: 48,
+			m: grids.ScanModeNegativeI,
+			indices: []idx{
+				{i: 0, v: 358.125},
+				{i: 1, v: 356.25},
+				{i: 95, v: 180.0},
+				{i: 191, v: 0.0},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.m.String(), func(t *testing.T) {
+			g := gaussian.NewRegular(tt.n, gaussian.WithScanMode(tt.m))
+
+			for _, idx := range tt.indices {
+				assert.Equal(t, idx.i, g.GetLongitudeIndex(idx.v))
+			}
+		})
+	}
 }
 
 func TestRegular_GridIndex(t *testing.T) {
-	g := NewRegular(48)
+	g := gaussian.NewRegular(48)
 
 	tests := []struct {
 		name     string
