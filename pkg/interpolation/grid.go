@@ -33,15 +33,14 @@ func NewGridInterpolator(reader ValueReader, grid grids.Grid, interpolator inter
 // InterpolateAt 在指定时间步和位置进行插值
 func (g *GridInterpolator) InterpolateAt(timeStep int, lat, lon float64) (float64, error) {
 	// 获取网格索引
-	latIdx := g.grid.GetLatitudeIndex(lat)
-	lonIdx := g.grid.GetLongitudeIndex(lat, lon)
+	latIdx, lonIdx := g.grid.GetNearestIndex(lat, lon)
 
 	// 获取四个相邻点的网格索引
 	indices := []int{
-		g.grid.GridIndexFromIndices(latIdx, lonIdx),
-		g.grid.GridIndexFromIndices(latIdx, lonIdx+1),
-		g.grid.GridIndexFromIndices(latIdx+1, lonIdx),
-		g.grid.GridIndexFromIndices(latIdx+1, lonIdx+1),
+		grids.GridIndexFromIndices(g.grid, latIdx, lonIdx),
+		grids.GridIndexFromIndices(g.grid, latIdx, lonIdx+1),
+		grids.GridIndexFromIndices(g.grid, latIdx+1, lonIdx),
+		grids.GridIndexFromIndices(g.grid, latIdx+1, lonIdx+1),
 	}
 
 	// 获取相邻点的值

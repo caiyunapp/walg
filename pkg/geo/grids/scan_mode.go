@@ -49,6 +49,10 @@ func (s ScanMode) IsPositiveJ() bool {
 	return s&2 == 2
 }
 
+func (s ScanMode) IsConsecutiveI() bool {
+	return s&4 == 0
+}
+
 func (s ScanMode) IsConsecutiveJ() bool {
 	return s&4 == 4
 }

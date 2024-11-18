@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/scorix/walg/pkg/geo/grids"
 	"github.com/scorix/walg/pkg/interpolation/interpolators"
 	"github.com/stretchr/testify/assert"
 )
@@ -24,30 +25,10 @@ type mockGrid struct {
 func (g *mockGrid) Size() int             { return len(g.lats) * len(g.lons) }
 func (g *mockGrid) Latitudes() []float64  { return g.lats }
 func (g *mockGrid) Longitudes() []float64 { return g.lons }
-func (g *mockGrid) GetLatitudeIndex(lat float64) int {
-	// 检查纬度边界
-	if lat < g.lats[0] || lat > g.lats[len(g.lats)-1] {
-		return -1 // 返回无效索引表示超出边界
-	}
-	return 0 // 简化实现，仅返回第一个索引
+func (g *mockGrid) GetNearestIndex(lat, lon float64) (latIdx, lonIdx int) {
+	return 0, 0
 }
-func (g *mockGrid) GetLongitudeIndex(lat, lon float64) int {
-	// 检查经度边界
-	if lon < g.lons[0] || lon > g.lons[len(g.lons)-1] {
-		return -1 // 返回无效索引表示超出边界
-	}
-	return 0 // 简化实现，仅返回第一个索引
-}
-func (g *mockGrid) GridIndex(lat, lon float64) int {
-	latIdx := g.GetLatitudeIndex(lat)
-	lonIdx := g.GetLongitudeIndex(lat, lon)
-	if latIdx < 0 || lonIdx < 0 {
-		return -1 // 返回无效索引
-	}
-	return g.GridIndexFromIndices(latIdx, lonIdx)
-}
-func (g *mockGrid) GridIndexFromIndices(latIdx, lonIdx int) int { return latIdx*len(g.lons) + lonIdx }
-func (g *mockGrid) GridPoint(index int) (lat, lon float64)      { return 0, 0 }
+func (g *mockGrid) ScanMode() grids.ScanMode { return 0 }
 
 // mockReader 模拟数据读取器
 // 存储了2x2网格的四个角点值：

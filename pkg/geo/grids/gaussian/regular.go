@@ -1,8 +1,9 @@
 package gaussian
 
 import (
-	"math"
+	"cmp"
 
+	"github.com/scorix/walg/pkg/geo/distance"
 	"github.com/scorix/walg/pkg/geo/grids"
 )
 
@@ -48,73 +49,6 @@ func (g *regular) longitudesSize() int {
 	return g.n * 4
 }
 
-func (g *regular) GridIndex(lat, lon float64) int {
-	latIdx := g.GetLatitudeIndex(lat)
-	lonIdx := g.GetLongitudeIndex(lat, lon)
-
-	return g.GridIndexFromIndices(latIdx, lonIdx)
-}
-
-func (g *regular) GetLatitudeIndex(lat float64) int {
-	latIdxArr := grids.FindNearestIndices(lat, g.latitudes)
-	a, b := latIdxArr[0], latIdxArr[1]
-
-	latIdx := a
-	if math.Abs(g.latitudes[a]-lat) > math.Abs(g.latitudes[b]-lat) {
-		latIdx = b
-	}
-
-	if g.scanMode.IsPositiveJ() {
-		latIdx = g.latitudesSize() - 1 - latIdx
-	}
-
-	return latIdx
-}
-
-func (g *regular) GetLongitudeIndex(lat, lon float64) int {
-	lonIdxArr := grids.FindNearestIndices(lon, g.longitudes)
-	a, b := lonIdxArr[0], lonIdxArr[1]
-
-	lonIdx := a
-	if math.Abs(g.longitudes[a]-lon) > math.Abs(g.longitudes[b]-lon) {
-		lonIdx = b
-	}
-
-	if g.scanMode.IsNegativeI() {
-		lonIdx = g.longitudesSize() - 1 - lonIdx
-	}
-
-	return lonIdx
-}
-
-func (g *regular) GridPoint(index int) (lat, lon float64) {
-	var latIdx, lonIdx int
-
-	if g.scanMode.IsConsecutiveJ() {
-		lonIdx = index / g.latitudesSize()
-		latIdx = index % g.latitudesSize()
-	} else {
-		latIdx = index / g.longitudesSize()
-		lonIdx = index % g.longitudesSize()
-	}
-
-	return g.latitudes[latIdx], g.longitudes[lonIdx]
-}
-
-func (g *regular) GridIndexFromIndices(latIdx, lonIdx int) int {
-	if g.scanMode.IsConsecutiveJ() {
-		if g.scanMode.HasOppositeRows() && lonIdx%2 == 1 {
-			latIdx = g.latitudesSize() - 1 - latIdx
-		}
-		return lonIdx*g.latitudesSize() + latIdx
-	} else {
-		if g.scanMode.HasOppositeRows() && latIdx%2 == 1 {
-			lonIdx = g.longitudesSize() - 1 - lonIdx
-		}
-		return latIdx*g.longitudesSize() + lonIdx
-	}
-}
-
 func (g *regular) Latitudes() []float64 {
 	return g.latitudes
 }
@@ -142,4 +76,31 @@ func (g *regular) calcLongitudes() []float64 {
 
 func (g *regular) ScanMode() grids.ScanMode {
 	return g.scanMode
+}
+
+func (g *regular) GetNearestIndex(lat, lon float64) (int, int) {
+	latitudes := g.Latitudes()
+	longitudes := g.Longitudes()
+
+	indicesLat := grids.FindNearestIndices(lat, latitudes)
+	indicesLon := grids.FindNearestIndices(lon, longitudes)
+
+	latIdx := indicesLat[0]
+	lonIdx := indicesLon[0]
+
+	const iterations = 10
+
+	dist := distance.VincentyIterations(lat, lon, latitudes[latIdx], longitudes[lonIdx], iterations)
+	for _, i := range indicesLat {
+		for _, j := range indicesLon {
+			d := distance.VincentyIterations(lat, lon, latitudes[i], longitudes[j], iterations)
+			if cmp.Compare(d, dist) < 0 {
+				dist = d
+				latIdx = i
+				lonIdx = j
+			}
+		}
+	}
+
+	return latIdx, lonIdx
 }
