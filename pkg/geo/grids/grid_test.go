@@ -65,6 +65,14 @@ func runGridTests(t *testing.T, grid grids.Grid, tests []gridTestCase) {
 	}
 }
 
+func benchGridTests(b *testing.B, grid grids.Grid, tests []gridTestCase) {
+	for i := 0; i < b.N; i++ {
+		for _, tt := range tests {
+			grids.GridIndex(grid, tt.lat, tt.lon)
+		}
+	}
+}
+
 var defaultRegularLatLonGridTests = []gridTestCase{
 	// 网格点精确匹配
 	{name: "North Pole", lat: 90.0, lon: 0.0, expectedIdx: 0, gridLat: 90.0, gridLon: 0.0},
@@ -613,4 +621,72 @@ func TestRegularGaussian_ConsecutiveJOppositeRowsScanMode(t *testing.T) {
 	grid := gaussian.NewRegular(48, gaussian.WithScanMode(grids.ScanModeConsecutiveJ|grids.ScanModeOppositeRows))
 
 	runGridTests(t, grid, consecutiveJOppositeRowsRegularGaussianGridTests)
+}
+
+func BenchmarkGridIndex(b *testing.B) {
+	b.Run("LatLon 0p25", func(b *testing.B) {
+		grid := latlon.NewLatLonGrid(-90, 90, 0.0, 359.75, 0.25, 0.25)
+
+		for i := 0; i < b.N; i++ {
+			grids.GridIndex(grid, 88.572169, 0.0)
+		}
+	})
+
+	b.Run("LatLon 0p16", func(b *testing.B) {
+		grid := latlon.NewLatLonGrid(-90, 90, 0.0, 359.84, 0.16, 0.16)
+
+		for i := 0; i < b.N; i++ {
+			grids.GridIndex(grid, 88.572169, 0.0)
+		}
+	})
+
+	b.Run("Gaussian F48", func(b *testing.B) {
+		grid := gaussian.NewRegular(48)
+
+		for i := 0; i < b.N; i++ {
+			grids.GridIndex(grid, 88.572169, 0.0)
+		}
+	})
+
+	b.Run("Gaussian F768", func(b *testing.B) {
+		grid := gaussian.NewRegular(768)
+
+		for i := 0; i < b.N; i++ {
+			grids.GridIndex(grid, 88.572169, 0.0)
+		}
+	})
+}
+
+func BenchmarkGridPoint(b *testing.B) {
+	b.Run("LatLon 0p25", func(b *testing.B) {
+		grid := latlon.NewLatLonGrid(-90, 90, 0.0, 359.75, 0.25, 0.25)
+
+		for i := 0; i < b.N; i++ {
+			grids.GridPoint(grid, i%grid.Size())
+		}
+	})
+
+	b.Run("LatLon 0p16", func(b *testing.B) {
+		grid := latlon.NewLatLonGrid(-90, 90, 0.0, 359.84, 0.16, 0.16)
+
+		for i := 0; i < b.N; i++ {
+			grids.GridPoint(grid, i%grid.Size())
+		}
+	})
+
+	b.Run("Gaussian F48", func(b *testing.B) {
+		grid := gaussian.NewRegular(48)
+
+		for i := 0; i < b.N; i++ {
+			grids.GridPoint(grid, i%grid.Size())
+		}
+	})
+
+	b.Run("Gaussian F768", func(b *testing.B) {
+		grid := gaussian.NewRegular(768)
+
+		for i := 0; i < b.N; i++ {
+			grids.GridPoint(grid, i%grid.Size())
+		}
+	})
 }
