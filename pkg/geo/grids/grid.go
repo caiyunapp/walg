@@ -58,12 +58,12 @@ func GridIndexFromIndices(g Grid, latIdx, lonIdx int) int {
 		return -1
 	}
 
-	// 处理负方向扫描
+	// 处理-i方向扫描
 	if g.ScanMode().IsNegativeI() {
 		lonIdx = len(g.Longitudes()) - 1 - lonIdx
 	}
 
-	// 处理J方向扫描
+	// 处理+j方向扫描
 	// 数组是从北到南排列，所以：
 	// - 当是正向J扫描（从南到北）时，需要反转索引
 	// - 当是负向J扫描（从北到南）时，不需要反转索引
@@ -73,9 +73,10 @@ func GridIndexFromIndices(g Grid, latIdx, lonIdx int) int {
 
 	// 处理交替行
 	if g.ScanMode().HasOppositeRows() {
-		if g.ScanMode().IsConsecutiveI() && latIdx%2 == 1 {
+		switch {
+		case g.ScanMode().IsConsecutiveI() && latIdx%2 == 1:
 			lonIdx = len(g.Longitudes()) - 1 - lonIdx
-		} else if g.ScanMode().IsConsecutiveJ() && lonIdx%2 == 1 {
+		case g.ScanMode().IsConsecutiveJ() && lonIdx%2 == 1:
 			latIdx = len(g.Latitudes()) - 1 - latIdx
 		}
 	}

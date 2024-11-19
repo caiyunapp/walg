@@ -88,7 +88,8 @@ func (g *regular) GetNearestIndex(lat, lon float64) (int, int) {
 	latIdx := indicesLat[0]
 	lonIdx := indicesLon[0]
 
-	const iterations = 10
+	// iterations 3 is enough for comparing the minimum distance
+	const iterations = 3
 
 	dist := distance.VincentyIterations(lat, lon, latitudes[latIdx], longitudes[lonIdx], iterations)
 	for _, i := range indicesLat {

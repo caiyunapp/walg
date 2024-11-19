@@ -81,79 +81,6 @@ func (g *latLon) Longitudes() []float64 {
 	return g.lons
 }
 
-// // GridIndex 根据经纬度返回网格索引
-// func (g *latLon) GridIndex(lat, lon float64) int {
-// 	latIdx, lonIdx := g.GetNearestIndex(lat, lon)
-
-// 	return g.GridIndexFromIndices(latIdx, lonIdx)
-// }
-
-// // GridIndexFromIndices 根据纬度和经度的索引计算网格索引
-// func (g *latLon) GridIndexFromIndices(latIdx, lonIdx int) int {
-// 	if latIdx < 0 || latIdx >= g.latCount || lonIdx < 0 || lonIdx >= g.lonCount {
-// 		return -1
-// 	}
-
-// 	// 处理负方向扫描
-// 	if g.scanMode.IsNegativeI() {
-// 		lonIdx = g.lonCount - 1 - lonIdx
-// 	}
-
-// 	// 处理J方向扫描
-// 	// 数组是从北到南排列，所以：
-// 	// - 当是正向J扫描（从南到北）时，需要反转索引
-// 	// - 当是负向J扫描（从北到南）时，不需要反转索引
-// 	if g.scanMode.IsPositiveJ() {
-// 		latIdx = g.latCount - 1 - latIdx
-// 	}
-
-// 	// 处理连续 J 方向
-// 	if g.scanMode.IsConsecutiveJ() {
-// 		return lonIdx*g.latCount + latIdx
-// 	}
-
-// 	// 处理交替行
-// 	if g.scanMode.HasOppositeRows() && latIdx%2 == 1 {
-// 		lonIdx = g.lonCount - 1 - lonIdx
-// 	}
-
-// 	// 默认是连续 I 方向
-// 	return latIdx*g.lonCount + lonIdx
-// }
-
-// // GridPoint 根据网格索引返回对应的经纬度
-// func (g *latLon) GridPoint(index int) (lat, lon float64) {
-// 	if index < 0 || index >= g.Size() {
-// 		return math.NaN(), math.NaN()
-// 	}
-
-// 	var latIdx, lonIdx int
-// 	if g.scanMode.IsConsecutiveJ() {
-// 		lonIdx = index / g.latCount
-// 		latIdx = index % g.latCount
-// 	} else {
-// 		latIdx = index / g.lonCount
-// 		lonIdx = index % g.lonCount
-// 	}
-
-// 	// 处理负方向扫描
-// 	if g.scanMode.IsNegativeI() {
-// 		lonIdx = g.lonCount - 1 - lonIdx
-// 	}
-
-// 	// 处理J方向扫描
-// 	if g.scanMode.IsPositiveJ() {
-// 		latIdx = g.latCount - 1 - latIdx
-// 	}
-
-// 	// 处理交替行
-// 	if g.scanMode.HasOppositeRows() && latIdx%2 == 1 {
-// 		lonIdx = g.lonCount - 1 - lonIdx
-// 	}
-
-// 	return g.lats[latIdx], g.lons[lonIdx]
-// }
-
 func (g *latLon) ScanMode() grids.ScanMode {
 	return g.scanMode
 }
@@ -241,7 +168,8 @@ func (g *latLon) GetNearestIndex(lat, lon float64) (int, int) {
 	latIdx := indicesLat[0]
 	lonIdx := indicesLon[0]
 
-	const iterations = 5
+	// iterations 3 is enough for comparing the minimum distance
+	const iterations = 3
 
 	dist := distance.VincentyIterations(lat, lon, g.lats[latIdx], g.lons[lonIdx], iterations)
 	for _, i := range indicesLat {
