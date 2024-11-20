@@ -2,37 +2,49 @@ package latlon
 
 import (
 	"cmp"
+	"fmt"
 	"math"
 
 	"github.com/scorix/walg/pkg/geo/distance"
 	"github.com/scorix/walg/pkg/geo/grids"
+	"golang.org/x/sync/singleflight"
 )
 
 // latLon 表示一个基于经纬度的等间距网格系统
 type latLon struct {
-	minLat   float64        // 最小纬度
-	maxLat   float64        // 最大纬度
-	minLon   float64        // 最小经度
-	maxLon   float64        // 最大经度
-	latStep  float64        // 纬度步长
-	lonStep  float64        // 经度步长
-	latCount int            // 纬度方向的网格数量
-	lonCount int            // 经度方向的网格数量
-	lats     []float64      // 缓存的纬度值
-	lons     []float64      // 缓存的经度值
-	scanMode grids.ScanMode // 新增: 扫描模式
+	minLat   float64   // 最小纬度
+	maxLat   float64   // 最大纬度
+	minLon   float64   // 最小经度
+	maxLon   float64   // 最大经度
+	latStep  float64   // 纬度步长
+	lonStep  float64   // 经度步长
+	latCount int       // 纬度方向的网格数量
+	lonCount int       // 经度方向的网格数量
+	lats     []float64 // 缓存的纬度值
+	lons     []float64 // 缓存的经度值
 }
 
-type latlonOption func(*latLon)
+var latLonCache = make(map[string]*latLon)
+var latLonCacheGroup singleflight.Group
 
-func WithScanMode(scanMode grids.ScanMode) latlonOption {
-	return func(ll *latLon) {
-		ll.scanMode = scanMode
-	}
+func NewLatLonGrid(minLat, maxLat, minLon, maxLon, latStep, lonStep float64) *latLon {
+	name := fmt.Sprintf("L%f,%f,%f,%f,%f,%f", minLat, maxLat, minLon, maxLon, latStep, lonStep)
+
+	ll, _, _ := latLonCacheGroup.Do(name, func() (any, error) {
+		if cached, ok := latLonCache[name]; ok {
+			return cached, nil
+		}
+
+		ll := newLatLonGrid(minLat, maxLat, minLon, maxLon, latStep, lonStep)
+		latLonCache[name] = ll
+		return ll, nil
+	})
+
+	return ll.(*latLon)
 }
 
-// NewLatLonGrid 创建一个新的经纬度网格
-func NewLatLonGrid(minLat, maxLat, minLon, maxLon, latStep, lonStep float64, opts ...latlonOption) *latLon {
+// newLatLonGrid 创建一个新的经纬度网格
+func newLatLonGrid(minLat, maxLat, minLon, maxLon, latStep, lonStep float64) *latLon {
 	ll := &latLon{
 		minLat:  math.Min(minLat, maxLat),
 		maxLat:  math.Max(minLat, maxLat),
@@ -40,11 +52,6 @@ func NewLatLonGrid(minLat, maxLat, minLon, maxLon, latStep, lonStep float64, opt
 		maxLon:  maxLon,
 		latStep: latStep,
 		lonStep: lonStep,
-	}
-
-	// 先应用选项，这样我们可以获取 scanMode
-	for _, o := range opts {
-		o(ll)
 	}
 
 	// 计算点数
@@ -79,10 +86,6 @@ func (g *latLon) Latitudes() []float64 {
 // Longitudes 返回所有经度值
 func (g *latLon) Longitudes() []float64 {
 	return g.lons
-}
-
-func (g *latLon) ScanMode() grids.ScanMode {
-	return g.scanMode
 }
 
 // normalizeLat 将一个纬度值映射到指定区间 [minVal, maxVal]

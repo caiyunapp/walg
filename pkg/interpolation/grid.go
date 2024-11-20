@@ -15,17 +15,19 @@ type ValueReader interface {
 type GridInterpolator struct {
 	reader       ValueReader
 	grid         grids.Grid
+	scanningMode grids.ScanMode
 	interpolator interpolators.Interpolator
 }
 
 // NewGridInterpolator 创建新的网格插值器
-func NewGridInterpolator(reader ValueReader, grid grids.Grid, interpolator interpolators.Interpolator) *GridInterpolator {
+func NewGridInterpolator(reader ValueReader, grid grids.Grid, scanningMode grids.ScanMode, interpolator interpolators.Interpolator) *GridInterpolator {
 	if interpolator == nil {
 		interpolator = &interpolators.BilinearInterpolator{} // 默认使用双线性插值
 	}
 	return &GridInterpolator{
 		reader:       reader,
 		grid:         grid,
+		scanningMode: scanningMode,
 		interpolator: interpolator,
 	}
 }
@@ -37,10 +39,10 @@ func (g *GridInterpolator) InterpolateAt(timeStep int, lat, lon float64) (float6
 
 	// 获取四个相邻点的网格索引
 	indices := []int{
-		grids.GridIndexFromIndices(g.grid, latIdx, lonIdx),
-		grids.GridIndexFromIndices(g.grid, latIdx, lonIdx+1),
-		grids.GridIndexFromIndices(g.grid, latIdx+1, lonIdx),
-		grids.GridIndexFromIndices(g.grid, latIdx+1, lonIdx+1),
+		grids.GridIndexFromIndices(g.grid, latIdx, lonIdx, g.scanningMode),
+		grids.GridIndexFromIndices(g.grid, latIdx, lonIdx+1, g.scanningMode),
+		grids.GridIndexFromIndices(g.grid, latIdx+1, lonIdx, g.scanningMode),
+		grids.GridIndexFromIndices(g.grid, latIdx+1, lonIdx+1, g.scanningMode),
 	}
 
 	// 获取相邻点的值

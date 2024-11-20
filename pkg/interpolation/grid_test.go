@@ -70,7 +70,7 @@ func TestGridInterpolator_InterpolateAt(t *testing.T) {
 	}
 
 	// 使用默认的双线性插值器
-	interpolator := NewGridInterpolator(reader, grid, nil)
+	interpolator := NewGridInterpolator(reader, grid, 0, nil)
 
 	tests := []struct {
 		name     string
@@ -141,7 +141,7 @@ func TestGridInterpolator_InterpolateAt_Error(t *testing.T) {
 	}
 
 	// 使用默认的双线性插值器
-	interpolator := NewGridInterpolator(reader, grid, nil)
+	interpolator := NewGridInterpolator(reader, grid, 0, nil)
 
 	tests := []struct {
 		name     string
@@ -195,6 +195,7 @@ func TestGridInterpolator_WithDifferentInterpolators(t *testing.T) {
 	tests := []struct {
 		name         string
 		interpolator interpolators.Interpolator
+		mode         grids.ScanMode
 		lat          float64
 		lon          float64
 		want         float64
@@ -224,7 +225,7 @@ func TestGridInterpolator_WithDifferentInterpolators(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			interpolator := NewGridInterpolator(reader, grid, tt.interpolator)
+			interpolator := NewGridInterpolator(reader, grid, tt.mode, tt.interpolator)
 			got, err := interpolator.InterpolateAt(0, tt.lat, tt.lon)
 			assert.NoError(t, err)
 			assert.InDelta(t, tt.want, got, 0.0001)
