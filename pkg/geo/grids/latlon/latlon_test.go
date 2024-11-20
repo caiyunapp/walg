@@ -1,6 +1,7 @@
 package latlon_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -74,7 +75,7 @@ func TestGridIndex(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := grids.GridIndex(grid, tt.lat, tt.lon)
+			result := grids.GridIndex(grid, tt.lat, tt.lon, 0)
 			assert.Equal(t, tt.expected, result, "For point (%.2f, %.2f)", tt.lat, tt.lon)
 		})
 	}
@@ -111,7 +112,7 @@ func TestGridIndexFromIndices(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := grids.GridIndexFromIndices(grid, tt.latIdx, tt.lonIdx)
+			result := grids.GridIndexFromIndices(grid, tt.latIdx, tt.lonIdx, 0)
 			assert.Equal(t, tt.expected, result, "For indices (lat=%d, lon=%d)", tt.latIdx, tt.lonIdx)
 		})
 	}
@@ -148,7 +149,7 @@ func TestGridPoint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lat, lon := grids.GridPoint(grid, tt.index)
+			lat, lon := grids.GridPoint(grid, tt.index, 0)
 			assert.Equal(t, tt.expectedLat, lat, "Latitude mismatch for index %d", tt.index)
 			assert.Equal(t, tt.expectedLon, lon, "Longitude mismatch for index %d", tt.index)
 		})
@@ -160,9 +161,19 @@ func TestGridRoundTrip(t *testing.T) {
 
 	// Test conversion from lat/lon to index and back
 	originalLat, originalLon := 32.5, 112.5
-	index := grids.GridIndex(grid, originalLat, originalLon)
-	recoveredLat, recoveredLon := grids.GridPoint(grid, index)
+	index := grids.GridIndex(grid, originalLat, originalLon, 0)
+	recoveredLat, recoveredLon := grids.GridPoint(grid, index, 0)
 
 	assert.Equal(t, originalLat, recoveredLat, "Latitude should remain unchanged")
 	assert.Equal(t, originalLon, recoveredLon, "Longitude should remain unchanged")
+}
+
+func BenchmarkNewLatLonGrid(b *testing.B) {
+	for _, latStep := range []float64{0.5, 0.25, 0.125} {
+		b.Run(fmt.Sprintf("latStep=%.3f", latStep), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				latlon.NewLatLonGrid(-90, 90, -180, 180, latStep, latStep)
+			}
+		})
+	}
 }

@@ -2,34 +2,42 @@ package gaussian
 
 import (
 	"cmp"
+	"fmt"
 	"math"
 
 	"github.com/scorix/walg/pkg/geo/distance"
 	"github.com/scorix/walg/pkg/geo/grids"
+	"golang.org/x/sync/singleflight"
 )
 
 type regular struct {
 	n          int
 	latitudes  []float64
 	longitudes []float64
-	scanMode   grids.ScanMode
 }
 
-type RegularOption func(*regular)
+var regularCache = make(map[int]*regular)
+var regularCacheGroup singleflight.Group
 
-func WithScanMode(scanMode grids.ScanMode) RegularOption {
-	return func(r *regular) {
-		r.scanMode = scanMode
-	}
+func NewRegular(n int) *regular {
+	name := fmt.Sprintf("F%d", n)
+
+	r, _, _ := regularCacheGroup.Do(name, func() (any, error) {
+		if cached, ok := regularCache[n]; ok {
+			return cached, nil
+		}
+
+		regular := newRegular(n)
+		regularCache[n] = regular
+		return regular, nil
+	})
+
+	return r.(*regular)
 }
 
-func NewRegular(n int, opts ...RegularOption) *regular {
+func newRegular(n int) *regular {
 	r := &regular{
 		n: n,
-	}
-
-	for _, opt := range opts {
-		opt(r)
 	}
 
 	r.latitudes = r.calcLatitudes()
@@ -73,10 +81,6 @@ func (g *regular) calcLongitudes() []float64 {
 	}
 
 	return longitudes
-}
-
-func (g *regular) ScanMode() grids.ScanMode {
-	return g.scanMode
 }
 
 func (g *regular) GetNearestIndex(lat, lon float64) (int, int) {

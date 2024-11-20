@@ -1,6 +1,7 @@
 package gaussian_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/scorix/walg/pkg/geo/grids"
@@ -190,9 +191,19 @@ func TestRegular_GridIndexFromIndices(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := gaussian.NewRegular(tt.n, gaussian.WithScanMode(tt.mode))
-			got := grids.GridIndexFromIndices(g, tt.latIdx, tt.lonIdx)
+			g := gaussian.NewRegular(tt.n)
+			got := grids.GridIndexFromIndices(g, tt.latIdx, tt.lonIdx, tt.mode)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func BenchmarkNewRegular(b *testing.B) {
+	for _, n := range []int{48, 96, 192, 384, 768} {
+		b.Run(fmt.Sprintf("n=%d", n), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				gaussian.NewRegular(n)
+			}
 		})
 	}
 }

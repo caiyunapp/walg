@@ -14,7 +14,7 @@ func NewNearestGrids(g Grid) *NearestGrids {
 	}
 }
 
-func (ng *NearestGrids) NearestGrids(lat, lon float64) []int {
+func (ng *NearestGrids) NearestGrids(lat, lon float64, mode ScanMode) []int {
 	// Find nearest latitude indices
 	latIdx := FindNearestIndices(lat, ng.latitudes)
 
@@ -25,7 +25,7 @@ func (ng *NearestGrids) NearestGrids(lat, lon float64) []int {
 	result := make([]int, 0, len(latIdx)*len(lonIdx))
 	for _, i := range latIdx {
 		for _, j := range lonIdx {
-			gridIndex := GridIndexFromIndices(ng.g, i, j)
+			gridIndex := GridIndexFromIndices(ng.g, i, j, mode)
 			result = append(result, gridIndex)
 		}
 	}
@@ -73,6 +73,6 @@ func FindNearestIndices(value float64, sorted []float64) [2]int {
 	return [2]int{left, right}
 }
 
-func (ng *NearestGrids) NearestGrid(lat, lon float64) int {
-	return GridIndex(ng.g, lat, lon)
+func (ng *NearestGrids) NearestGrid(lat, lon float64, mode ScanMode) int {
+	return GridIndex(ng.g, lat, lon, mode)
 }

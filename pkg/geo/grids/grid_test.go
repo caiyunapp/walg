@@ -22,28 +22,28 @@ type gridTestCase struct {
 }
 
 // 添加 runGridTests 函数
-func runGridTests(t *testing.T, grid grids.Grid, tests []gridTestCase) {
+func runGridTests(t *testing.T, grid grids.Grid, tests []gridTestCase, mode grids.ScanMode) {
 	const iterations = 5
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			idx := grids.GridIndex(grid, tt.lat, tt.lon)
-			recoveredLat, recoveredLon := grids.GridPoint(grid, idx)
+			idx := grids.GridIndex(grid, tt.lat, tt.lon, mode)
+			recoveredLat, recoveredLon := grids.GridPoint(grid, idx, mode)
 
 			actualDist := distance.VincentyIterations(tt.lat, tt.lon, recoveredLat, recoveredLon, iterations)
 			t.Logf("Actual #%d index: (%.3f, %.3f), dist: %fkm from (%.3f, %.3f)",
 				idx, recoveredLat, recoveredLon, actualDist, tt.lat, tt.lon)
 
-			nearestIdxs := grids.NewNearestGrids(grid).NearestGrids(tt.lat, tt.lon)
+			nearestIdxs := grids.NewNearestGrids(grid).NearestGrids(tt.lat, tt.lon, mode)
 			for i, nearIdx := range nearestIdxs {
-				nearLat, nearLon := grids.GridPoint(grid, nearIdx)
+				nearLat, nearLon := grids.GridPoint(grid, nearIdx, mode)
 				dist := distance.VincentyIterations(tt.lat, tt.lon, nearLat, nearLon, iterations)
 				t.Logf("Nearest %d index #%d: (%.3f, %.3f), dist: %fkm from (%.3f, %.3f)",
 					i, nearIdx, nearLat, nearLon, dist, tt.lat, tt.lon)
 				assert.GreaterOrEqual(t, dist, actualDist)
 			}
 
-			expectedLat, expectedLon := grids.GridPoint(grid, tt.expectedIdx)
+			expectedLat, expectedLon := grids.GridPoint(grid, tt.expectedIdx, mode)
 			expectedDist := distance.VincentyIterations(tt.lat, tt.lon, expectedLat, expectedLon, iterations)
 			t.Logf("Expected #%d index: (%.3f, %.3f), dist: %f from (%.3f, %.3f)",
 				tt.expectedIdx, expectedLat, expectedLon, expectedDist, tt.lat, tt.lon)
@@ -63,8 +63,8 @@ func runGridTests(t *testing.T, grid grids.Grid, tests []gridTestCase) {
 			}
 
 			// guess
-			guessIdx := grids.GuessGridIndex(grid, tt.lat, tt.lon)
-			guessLat, guessLon := grids.GridPoint(grid, guessIdx)
+			guessIdx := grids.GuessGridIndex(grid, tt.lat, tt.lon, mode)
+			guessLat, guessLon := grids.GridPoint(grid, guessIdx, mode)
 			guessDist := distance.VincentyIterations(tt.lat, tt.lon, guessLat, guessLon, iterations)
 			t.Logf("Guess index #%d: (%.3f, %.3f), dist: %f from (%.3f, %.3f)",
 				guessIdx, guessLat, guessLon, guessDist, tt.lat, tt.lon)
@@ -74,10 +74,10 @@ func runGridTests(t *testing.T, grid grids.Grid, tests []gridTestCase) {
 	}
 }
 
-func benchGridTests(b *testing.B, grid grids.Grid, tests []gridTestCase) {
+func benchGridTests(b *testing.B, grid grids.Grid, tests []gridTestCase, mode grids.ScanMode) {
 	for i := 0; i < b.N; i++ {
 		for _, tt := range tests {
-			grids.GridIndex(grid, tt.lat, tt.lon)
+			grids.GridIndex(grid, tt.lat, tt.lon, mode)
 		}
 	}
 }
@@ -163,7 +163,7 @@ func TestLatLon_DefaultScanMode(t *testing.T) {
 		lonStep,
 	)
 
-	runGridTests(t, grid, defaultRegularLatLonGridTests)
+	runGridTests(t, grid, defaultRegularLatLonGridTests, 0)
 }
 
 var negativeIRegularLatLonGridTests = []gridTestCase{
@@ -247,10 +247,9 @@ func TestLatLon_NegativeIScanMode(t *testing.T) {
 		lastLon,  // maxLon
 		latStep,
 		lonStep,
-		latlon.WithScanMode(grids.ScanModeNegativeI),
 	)
 
-	runGridTests(t, grid, negativeIRegularLatLonGridTests)
+	runGridTests(t, grid, negativeIRegularLatLonGridTests, grids.ScanModeNegativeI)
 }
 
 var positiveJRegularLatLonGridTests = []gridTestCase{
@@ -333,10 +332,9 @@ func TestLatLon_PositiveJScanMode(t *testing.T) {
 		lastLon,  // maxLon
 		latStep,
 		lonStep,
-		latlon.WithScanMode(grids.ScanModePositiveJ),
 	)
 
-	runGridTests(t, grid, positiveJRegularLatLonGridTests)
+	runGridTests(t, grid, positiveJRegularLatLonGridTests, grids.ScanModePositiveJ)
 }
 
 var consecutiveJRegularLatLonGridTests = []gridTestCase{
@@ -427,10 +425,9 @@ func TestLatLon_ConsecutiveJScanMode(t *testing.T) {
 		lastLon,  // maxLon
 		latStep,
 		lonStep,
-		latlon.WithScanMode(grids.ScanModeConsecutiveJ),
 	)
 
-	runGridTests(t, grid, consecutiveJRegularLatLonGridTests)
+	runGridTests(t, grid, consecutiveJRegularLatLonGridTests, grids.ScanModeConsecutiveJ)
 }
 
 var oppositeRowsRegularLatLonGridTests = []gridTestCase{
@@ -524,10 +521,9 @@ func TestLatLon_OppositeRowsScanMode(t *testing.T) {
 		lastLon,  // maxLon
 		latStep,
 		lonStep,
-		latlon.WithScanMode(grids.ScanModeOppositeRows),
 	)
 
-	runGridTests(t, grid, oppositeRowsRegularLatLonGridTests)
+	runGridTests(t, grid, oppositeRowsRegularLatLonGridTests, grids.ScanModeOppositeRows)
 }
 
 var defaultRegularGaussianGridTests = []gridTestCase{
@@ -544,7 +540,7 @@ var defaultRegularGaussianGridTests = []gridTestCase{
 func TestRegularGaussian_DefaultScanMode(t *testing.T) {
 	grid := gaussian.NewRegular(48)
 
-	runGridTests(t, grid, defaultRegularGaussianGridTests)
+	runGridTests(t, grid, defaultRegularGaussianGridTests, 0)
 }
 
 var negativeIRegularGaussianGridTests = []gridTestCase{
@@ -559,9 +555,9 @@ var negativeIRegularGaussianGridTests = []gridTestCase{
 }
 
 func TestRegularGaussian_NegativeIScanMode(t *testing.T) {
-	grid := gaussian.NewRegular(48, gaussian.WithScanMode(grids.ScanModeNegativeI))
+	grid := gaussian.NewRegular(48)
 
-	runGridTests(t, grid, negativeIRegularGaussianGridTests)
+	runGridTests(t, grid, negativeIRegularGaussianGridTests, grids.ScanModeNegativeI)
 }
 
 var positiveJRegularGaussianGridTests = []gridTestCase{
@@ -576,9 +572,9 @@ var positiveJRegularGaussianGridTests = []gridTestCase{
 }
 
 func TestRegularGaussian_PositiveJScanMode(t *testing.T) {
-	grid := gaussian.NewRegular(48, gaussian.WithScanMode(grids.ScanModePositiveJ))
+	grid := gaussian.NewRegular(48)
 
-	runGridTests(t, grid, positiveJRegularGaussianGridTests)
+	runGridTests(t, grid, positiveJRegularGaussianGridTests, grids.ScanModePositiveJ)
 }
 
 var consecutiveJRegularGaussianGridTests = []gridTestCase{
@@ -593,9 +589,9 @@ var consecutiveJRegularGaussianGridTests = []gridTestCase{
 }
 
 func TestRegularGaussian_ConsecutiveJScanMode(t *testing.T) {
-	grid := gaussian.NewRegular(48, gaussian.WithScanMode(grids.ScanModeConsecutiveJ))
+	grid := gaussian.NewRegular(48)
 
-	runGridTests(t, grid, consecutiveJRegularGaussianGridTests)
+	runGridTests(t, grid, consecutiveJRegularGaussianGridTests, grids.ScanModeConsecutiveJ)
 }
 
 var oppositeRowsRegularGaussianGridTests = []gridTestCase{
@@ -610,9 +606,9 @@ var oppositeRowsRegularGaussianGridTests = []gridTestCase{
 }
 
 func TestRegularGaussian_OppositeRowsScanMode(t *testing.T) {
-	grid := gaussian.NewRegular(48, gaussian.WithScanMode(grids.ScanModeOppositeRows))
+	grid := gaussian.NewRegular(48)
 
-	runGridTests(t, grid, oppositeRowsRegularGaussianGridTests)
+	runGridTests(t, grid, oppositeRowsRegularGaussianGridTests, grids.ScanModeOppositeRows)
 }
 
 var consecutiveJOppositeRowsRegularGaussianGridTests = []gridTestCase{
@@ -627,9 +623,9 @@ var consecutiveJOppositeRowsRegularGaussianGridTests = []gridTestCase{
 }
 
 func TestRegularGaussian_ConsecutiveJOppositeRowsScanMode(t *testing.T) {
-	grid := gaussian.NewRegular(48, gaussian.WithScanMode(grids.ScanModeConsecutiveJ|grids.ScanModeOppositeRows))
+	grid := gaussian.NewRegular(48)
 
-	runGridTests(t, grid, consecutiveJOppositeRowsRegularGaussianGridTests)
+	runGridTests(t, grid, consecutiveJOppositeRowsRegularGaussianGridTests, grids.ScanModeConsecutiveJ|grids.ScanModeOppositeRows)
 }
 
 func BenchmarkGridIndex(b *testing.B) {
@@ -637,7 +633,7 @@ func BenchmarkGridIndex(b *testing.B) {
 		grid := latlon.NewLatLonGrid(-90, 90, 0.0, 359.75, 0.25, 0.25)
 
 		for i := 0; i < b.N; i++ {
-			grids.GridIndex(grid, 88.572169, 0.0)
+			grids.GridIndex(grid, 88.572169, 0.0, 0)
 		}
 	})
 
@@ -645,7 +641,7 @@ func BenchmarkGridIndex(b *testing.B) {
 		grid := latlon.NewLatLonGrid(-90, 90, 0.0, 359.84, 0.16, 0.16)
 
 		for i := 0; i < b.N; i++ {
-			grids.GridIndex(grid, 88.572169, 0.0)
+			grids.GridIndex(grid, 88.572169, 0.0, 0)
 		}
 	})
 
@@ -653,7 +649,7 @@ func BenchmarkGridIndex(b *testing.B) {
 		grid := gaussian.NewRegular(48)
 
 		for i := 0; i < b.N; i++ {
-			grids.GridIndex(grid, 88.572169, 0.0)
+			grids.GridIndex(grid, 88.572169, 0.0, 0)
 		}
 	})
 
@@ -661,7 +657,7 @@ func BenchmarkGridIndex(b *testing.B) {
 		grid := gaussian.NewRegular(768)
 
 		for i := 0; i < b.N; i++ {
-			grids.GridIndex(grid, 88.572169, 0.0)
+			grids.GridIndex(grid, 88.572169, 0.0, 0)
 		}
 	})
 }
@@ -671,7 +667,7 @@ func BenchmarkGridGuessIndex(b *testing.B) {
 		grid := latlon.NewLatLonGrid(-90, 90, 0.0, 359.75, 0.25, 0.25)
 
 		for i := 0; i < b.N; i++ {
-			grids.GuessGridIndex(grid, 88.572169, 0.0)
+			grids.GuessGridIndex(grid, 88.572169, 0.0, 0)
 		}
 	})
 
@@ -679,7 +675,7 @@ func BenchmarkGridGuessIndex(b *testing.B) {
 		grid := latlon.NewLatLonGrid(-90, 90, 0.0, 359.84, 0.16, 0.16)
 
 		for i := 0; i < b.N; i++ {
-			grids.GuessGridIndex(grid, 88.572169, 0.0)
+			grids.GuessGridIndex(grid, 88.572169, 0.0, 0)
 		}
 	})
 
@@ -687,7 +683,7 @@ func BenchmarkGridGuessIndex(b *testing.B) {
 		grid := gaussian.NewRegular(48)
 
 		for i := 0; i < b.N; i++ {
-			grids.GuessGridIndex(grid, 88.572169, 0.0)
+			grids.GuessGridIndex(grid, 88.572169, 0.0, 0)
 		}
 	})
 
@@ -695,7 +691,7 @@ func BenchmarkGridGuessIndex(b *testing.B) {
 		grid := gaussian.NewRegular(768)
 
 		for i := 0; i < b.N; i++ {
-			grids.GuessGridIndex(grid, 88.572169, 0.0)
+			grids.GuessGridIndex(grid, 88.572169, 0.0, 0)
 		}
 	})
 }
@@ -705,7 +701,7 @@ func BenchmarkGridPoint(b *testing.B) {
 		grid := latlon.NewLatLonGrid(-90, 90, 0.0, 359.75, 0.25, 0.25)
 
 		for i := 0; i < b.N; i++ {
-			grids.GridPoint(grid, i%grid.Size())
+			grids.GridPoint(grid, i%grid.Size(), 0)
 		}
 	})
 
@@ -713,7 +709,7 @@ func BenchmarkGridPoint(b *testing.B) {
 		grid := latlon.NewLatLonGrid(-90, 90, 0.0, 359.84, 0.16, 0.16)
 
 		for i := 0; i < b.N; i++ {
-			grids.GridPoint(grid, i%grid.Size())
+			grids.GridPoint(grid, i%grid.Size(), 0)
 		}
 	})
 
@@ -721,7 +717,7 @@ func BenchmarkGridPoint(b *testing.B) {
 		grid := gaussian.NewRegular(48)
 
 		for i := 0; i < b.N; i++ {
-			grids.GridPoint(grid, i%grid.Size())
+			grids.GridPoint(grid, i%grid.Size(), 0)
 		}
 	})
 
@@ -729,7 +725,7 @@ func BenchmarkGridPoint(b *testing.B) {
 		grid := gaussian.NewRegular(768)
 
 		for i := 0; i < b.N; i++ {
-			grids.GridPoint(grid, i%grid.Size())
+			grids.GridPoint(grid, i%grid.Size(), 0)
 		}
 	})
 }
