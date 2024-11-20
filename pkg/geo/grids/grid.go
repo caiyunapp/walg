@@ -7,9 +7,9 @@ import (
 type Grid interface {
 	Size() int
 	Latitudes() []float64
-	Longitudes() []float64
 	GetNearestIndex(lat, lon float64) (int, int)
 	GuessNearestIndex(lat, lon float64) (int, int)
+	LonPointsAt(latIdx int) int
 }
 
 func GuessGridIndex(g Grid, lat, lon float64, mode ScanMode) int {
@@ -30,20 +30,25 @@ func GridPoint(g Grid, index int, mode ScanMode) (lat, lon float64) {
 	}
 
 	latitudesSize := len(g.Latitudes())
-	longitudesSize := len(g.Longitudes())
-
 	var latIdx, lonIdx int
+
 	if mode.IsConsecutiveJ() {
+		// 连续J模式：先计算经度索引，再计算纬度索引
 		lonIdx = index / latitudesSize
 		latIdx = index % latitudesSize
 	} else {
-		latIdx = index / longitudesSize
-		lonIdx = index % longitudesSize
-	}
-
-	// 处理负方向扫描
-	if mode.IsNegativeI() {
-		lonIdx = longitudesSize - 1 - lonIdx
+		// 连续I模式：先计算纬度索引，再计算经度索引
+		totalIndex := 0
+		for i := 0; i < latitudesSize; i++ {
+			pointsInLat := g.LonPointsAt(i)
+			nextTotal := totalIndex + pointsInLat
+			if index < nextTotal {
+				latIdx = i
+				lonIdx = index - totalIndex
+				break
+			}
+			totalIndex = nextTotal
+		}
 	}
 
 	// 处理J方向扫描
@@ -51,47 +56,84 @@ func GridPoint(g Grid, index int, mode ScanMode) (lat, lon float64) {
 		latIdx = latitudesSize - 1 - latIdx
 	}
 
-	// 处理交替行
-	if mode.HasOppositeRows() && latIdx%2 == 1 {
-		lonIdx = longitudesSize - 1 - lonIdx
-	}
-
-	return g.Latitudes()[latIdx], g.Longitudes()[lonIdx]
-}
-
-func GridIndexFromIndices(g Grid, latIdx, lonIdx int, mode ScanMode) int {
-	if latIdx < 0 || latIdx >= len(g.Latitudes()) || lonIdx < 0 || lonIdx >= len(g.Longitudes()) {
-		return -1
-	}
-
-	// 处理-i方向扫描
+	// 处理负方向扫描
 	if mode.IsNegativeI() {
-		lonIdx = len(g.Longitudes()) - 1 - lonIdx
-	}
-
-	// 处理+j方向扫描
-	// 数组是从北到南排列，所以：
-	// - 当是正向J扫描（从南到北）时，需要反转索引
-	// - 当是负向J扫描（从北到南）时，不需要反转索引
-	if mode.IsPositiveJ() {
-		latIdx = len(g.Latitudes()) - 1 - latIdx
+		lonIdx = g.LonPointsAt(latIdx) - 1 - lonIdx
 	}
 
 	// 处理交替行
 	if mode.HasOppositeRows() {
-		switch {
-		case mode.IsConsecutiveI() && latIdx%2 == 1:
-			lonIdx = len(g.Longitudes()) - 1 - lonIdx
-		case mode.IsConsecutiveJ() && lonIdx%2 == 1:
-			latIdx = len(g.Latitudes()) - 1 - latIdx
+		if mode.IsConsecutiveJ() {
+			// 连续J模式：奇数列反转纬度
+			if lonIdx%2 == 1 {
+				latIdx = latitudesSize - 1 - latIdx
+			}
+		} else {
+			// 连续I模式：奇数行反转经度
+			if latIdx%2 == 1 {
+				lonIdx = g.LonPointsAt(latIdx) - 1 - lonIdx
+			}
 		}
 	}
 
-	// 连续 J 方向
-	if mode.IsConsecutiveJ() {
-		return lonIdx*len(g.Latitudes()) + latIdx
+	// 获取纬度值
+	lat = g.Latitudes()[latIdx]
+
+	// 计算经度值
+	lonStep := 360.0 / float64(g.LonPointsAt(latIdx))
+	lon = float64(lonIdx) * lonStep
+
+	return lat, lon
+}
+
+func GridIndexFromIndices(g Grid, latIdx, lonIdx int, mode ScanMode) int {
+	if latIdx < 0 || latIdx >= len(g.Latitudes()) {
+		return -1
 	}
 
-	// 连续 I 方向
-	return latIdx*len(g.Longitudes()) + lonIdx
+	lonPoints := g.LonPointsAt(latIdx)
+	if lonIdx < 0 || lonIdx >= lonPoints {
+		return -1
+	}
+
+	// 处理J方向扫描
+	if mode.IsPositiveJ() {
+		latIdx = len(g.Latitudes()) - 1 - latIdx
+	}
+
+	// 处理负方向扫描
+	if mode.IsNegativeI() {
+		lonIdx = lonPoints - 1 - lonIdx
+	}
+
+	// 处理交替行
+	if mode.HasOppositeRows() {
+		if mode.IsConsecutiveJ() {
+			// 连续J模式：奇数列反转纬度
+			if lonIdx%2 == 1 {
+				latIdx = len(g.Latitudes()) - 1 - latIdx
+			}
+		} else {
+			// 连续I模式：奇数行反转经度
+			if latIdx%2 == 1 {
+				lonIdx = lonPoints - 1 - lonIdx
+			}
+		}
+	}
+
+	if mode.IsConsecutiveJ() {
+		// 连续J模式：计算每列的起始索引
+		baseIndex := 0
+		for i := 0; i < lonIdx; i++ {
+			baseIndex += len(g.Latitudes())
+		}
+		return baseIndex + latIdx
+	}
+
+	// 连续I模式：计算每行的起始索引
+	baseIndex := 0
+	for i := 0; i < latIdx; i++ {
+		baseIndex += g.LonPointsAt(i)
+	}
+	return baseIndex + lonIdx
 }

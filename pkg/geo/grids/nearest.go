@@ -1,16 +1,18 @@
 package grids
 
+import (
+	"math"
+)
+
 type NearestGrids struct {
-	g          Grid
-	latitudes  []float64
-	longitudes []float64
+	g         Grid
+	latitudes []float64
 }
 
 func NewNearestGrids(g Grid) *NearestGrids {
 	return &NearestGrids{
-		g:          g,
-		latitudes:  g.Latitudes(),
-		longitudes: g.Longitudes(),
+		g:         g,
+		latitudes: g.Latitudes(),
 	}
 }
 
@@ -18,15 +20,31 @@ func (ng *NearestGrids) NearestGrids(lat, lon float64, mode ScanMode) []int {
 	// Find nearest latitude indices
 	latIdx := FindNearestIndices(lat, ng.latitudes)
 
-	// Find nearest longitude indices
-	lonIdx := FindNearestIndices(lon, ng.longitudes)
+	// 标准化经度到 [0, 360)
+	lon = math.Mod(lon+360.0, 360.0)
 
-	// Calculate all possible combinations of nearby grid points
-	result := make([]int, 0, len(latIdx)*len(lonIdx))
+	result := make([]int, 0, 4) // 通常每个点最多有4个最近点
 	for _, i := range latIdx {
-		for _, j := range lonIdx {
+		// 计算该纬度的经度步长
+		lonStep := 360.0 / float64(ng.g.LonPointsAt(i))
+
+		// 找到最近的经度索引
+		lonIdxFloat := lon / lonStep
+		lonIdx := int(math.Round(lonIdxFloat))
+
+		// 检查前后两个经度点
+		lonIndices := []int{
+			(lonIdx - 1 + ng.g.LonPointsAt(i)) % ng.g.LonPointsAt(i),
+			lonIdx % ng.g.LonPointsAt(i),
+			(lonIdx + 1) % ng.g.LonPointsAt(i),
+		}
+
+		// 将所有可能的组合添加到结果中
+		for _, j := range lonIndices {
 			gridIndex := GridIndexFromIndices(ng.g, i, j, mode)
-			result = append(result, gridIndex)
+			if gridIndex >= 0 { // 只添加有效的索引
+				result = append(result, gridIndex)
+			}
 		}
 	}
 

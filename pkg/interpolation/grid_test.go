@@ -32,6 +32,7 @@ func (g *mockGrid) ScanMode() grids.ScanMode { return 0 }
 func (g *mockGrid) GuessNearestIndex(lat, lon float64) (latIdx, lonIdx int) {
 	return 0, 0
 }
+func (g *mockGrid) LonPointsAt(latIdx int) int { return len(g.lons) }
 
 // mockReader 模拟数据读取器
 // 存储了2x2网格的四个角点值：
