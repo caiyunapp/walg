@@ -10,6 +10,13 @@ type Grid interface {
 	Longitudes() []float64
 	ScanMode() ScanMode
 	GetNearestIndex(lat, lon float64) (int, int)
+	GuessNearestIndex(lat, lon float64) (int, int)
+}
+
+func GuessGridIndex(g Grid, lat, lon float64) int {
+	latIdx, lonIdx := g.GuessNearestIndex(lat, lon)
+
+	return GridIndexFromIndices(g, latIdx, lonIdx)
 }
 
 func GridIndex(g Grid, lat, lon float64) int {

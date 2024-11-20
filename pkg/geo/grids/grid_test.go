@@ -61,6 +61,15 @@ func runGridTests(t *testing.T, grid grids.Grid, tests []gridTestCase) {
 				t.Logf("Expected grid index %d: (%.3f, %.3f) -> (%.3f, %.3f) dist: %f",
 					tt.expectedIdx, tt.lat, tt.lon, expectedLat, expectedLon, expectedDist)
 			}
+
+			// guess
+			guessIdx := grids.GuessGridIndex(grid, tt.lat, tt.lon)
+			guessLat, guessLon := grids.GridPoint(grid, guessIdx)
+			guessDist := distance.VincentyIterations(tt.lat, tt.lon, guessLat, guessLon, iterations)
+			t.Logf("Guess index #%d: (%.3f, %.3f), dist: %f from (%.3f, %.3f)",
+				guessIdx, guessLat, guessLon, guessDist, tt.lat, tt.lon)
+
+			assert.InDelta(t, expectedDist, guessDist, 1e-3)
 		})
 	}
 }
@@ -653,6 +662,40 @@ func BenchmarkGridIndex(b *testing.B) {
 
 		for i := 0; i < b.N; i++ {
 			grids.GridIndex(grid, 88.572169, 0.0)
+		}
+	})
+}
+
+func BenchmarkGridGuessIndex(b *testing.B) {
+	b.Run("LatLon 0p25", func(b *testing.B) {
+		grid := latlon.NewLatLonGrid(-90, 90, 0.0, 359.75, 0.25, 0.25)
+
+		for i := 0; i < b.N; i++ {
+			grids.GuessGridIndex(grid, 88.572169, 0.0)
+		}
+	})
+
+	b.Run("LatLon 0p16", func(b *testing.B) {
+		grid := latlon.NewLatLonGrid(-90, 90, 0.0, 359.84, 0.16, 0.16)
+
+		for i := 0; i < b.N; i++ {
+			grids.GuessGridIndex(grid, 88.572169, 0.0)
+		}
+	})
+
+	b.Run("Gaussian F48", func(b *testing.B) {
+		grid := gaussian.NewRegular(48)
+
+		for i := 0; i < b.N; i++ {
+			grids.GuessGridIndex(grid, 88.572169, 0.0)
+		}
+	})
+
+	b.Run("Gaussian F768", func(b *testing.B) {
+		grid := gaussian.NewRegular(768)
+
+		for i := 0; i < b.N; i++ {
+			grids.GuessGridIndex(grid, 88.572169, 0.0)
 		}
 	})
 }
