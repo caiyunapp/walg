@@ -2,6 +2,7 @@ package gaussian
 
 import (
 	"cmp"
+	"math"
 
 	"github.com/scorix/walg/pkg/geo/distance"
 	"github.com/scorix/walg/pkg/geo/grids"
@@ -101,6 +102,27 @@ func (g *regular) GetNearestIndex(lat, lon float64) (int, int) {
 				lonIdx = j
 			}
 		}
+	}
+
+	return latIdx, lonIdx
+}
+
+func (g *regular) GuessNearestIndex(lat, lon float64) (int, int) {
+	latitudes := g.Latitudes()
+	longitudes := g.Longitudes()
+
+	indicesLat := grids.FindNearestIndices(lat, latitudes)
+	indicesLon := grids.FindNearestIndices(lon, longitudes)
+
+	latIdx := indicesLat[0]
+	lonIdx := indicesLon[0]
+
+	if math.Abs(latitudes[latIdx]-lat) > math.Abs(latitudes[indicesLat[1]]-lat) {
+		latIdx = indicesLat[1]
+	}
+
+	if math.Abs(longitudes[lonIdx]-lon) > math.Abs(longitudes[indicesLon[1]]-lon) {
+		lonIdx = indicesLon[1]
 	}
 
 	return latIdx, lonIdx

@@ -185,3 +185,30 @@ func (g *latLon) GetNearestIndex(lat, lon float64) (int, int) {
 
 	return latIdx, lonIdx
 }
+
+func (g *latLon) GuessNearestIndex(lat, lon float64) (int, int) {
+	isSphere := func() bool {
+		maxLon := int(g.maxLon * 1e6)
+		minLon := int(g.minLon * 1e6)
+		return maxLon+int(g.lonStep*1e6) == minLon+360*1e6
+	}()
+
+	normalizedLat := g.normalizeLat(g.minLat, g.maxLat, lat)
+	normalizedLon := g.normalizeLon(g.minLon, g.maxLon, lon, isSphere)
+
+	indicesLat := grids.FindNearestIndices(normalizedLat, g.lats)
+	indicesLon := grids.FindNearestIndices(normalizedLon, g.lons)
+
+	latIdx := indicesLat[0]
+	lonIdx := indicesLon[0]
+
+	if math.Abs(g.lats[latIdx]-lat) > math.Abs(g.lats[indicesLat[1]]-lat) {
+		latIdx = indicesLat[1]
+	}
+
+	if math.Abs(g.lons[lonIdx]-lon) > math.Abs(g.lons[indicesLon[1]]-lon) {
+		lonIdx = indicesLon[1]
+	}
+
+	return latIdx, lonIdx
+}
