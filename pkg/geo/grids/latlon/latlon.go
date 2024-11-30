@@ -215,3 +215,9 @@ func (g *latLon) GuessNearestIndex(lat, lon float64) (int, int) {
 
 	return latIdx, lonIdx
 }
+
+// 添加 LonPointsAt 方法
+func (g *latLon) LonPointsAt(latIdx int) int {
+	// 等经纬度网格在每个纬度上的经度点数都是相同的
+	return g.lonCount
+}

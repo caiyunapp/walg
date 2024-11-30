@@ -131,3 +131,7 @@ func (g *regular) GuessNearestIndex(lat, lon float64) (int, int) {
 
 	return latIdx, lonIdx
 }
+
+func (g *regular) LonPointsAt(latIdx int) int {
+	return g.longitudesSize()
+}
