@@ -24,9 +24,9 @@ func GridIndex(g Grid, lat, lon float64, mode ScanMode) int {
 	return GridIndexFromIndices(g, latIdx, lonIdx, mode)
 }
 
-func GridPoint(g Grid, index int, mode ScanMode) (lat, lon float64) {
+func GridPoint(g Grid, index int, mode ScanMode) (lat, lon float64, ok bool) {
 	if index < 0 || index >= g.Size() {
-		return math.NaN(), math.NaN()
+		return math.NaN(), math.NaN(), false
 	}
 
 	latitudesSize := len(g.Latitudes())
@@ -56,7 +56,7 @@ func GridPoint(g Grid, index int, mode ScanMode) (lat, lon float64) {
 		lonIdx = longitudesSize - 1 - lonIdx
 	}
 
-	return g.Latitudes()[latIdx], g.Longitudes()[lonIdx]
+	return g.Latitudes()[latIdx], g.Longitudes()[lonIdx], true
 }
 
 func GridIndexFromIndices(g Grid, latIdx, lonIdx int, mode ScanMode) int {

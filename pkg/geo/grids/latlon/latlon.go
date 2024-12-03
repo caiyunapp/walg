@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"math"
+	"sync"
 
 	"github.com/scorix/walg/pkg/geo/distance"
 	"github.com/scorix/walg/pkg/geo/grids"
@@ -27,11 +28,15 @@ type latLon struct {
 
 var latLonCache = make(map[string]*latLon)
 var latLonCacheGroup singleflight.Group
+var latLonCacheLock sync.Mutex
 
 func NewLatLonGrid(minLat, maxLat, minLon, maxLon, latStep, lonStep float64) *latLon {
 	name := fmt.Sprintf("L%f,%f,%f,%f,%f,%f", minLat, maxLat, minLon, maxLon, latStep, lonStep)
 
 	ll, _, _ := latLonCacheGroup.Do(name, func() (any, error) {
+		latLonCacheLock.Lock()
+		defer latLonCacheLock.Unlock()
+
 		if cached, ok := latLonCache[name]; ok {
 			return cached, nil
 		}

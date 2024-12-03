@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/scorix/walg/pkg/geo/grids"
 	"github.com/scorix/walg/pkg/geo/grids/latlon"
@@ -149,7 +150,9 @@ func TestGridPoint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lat, lon := grids.GridPoint(grid, tt.index, 0)
+			lat, lon, ok := grids.GridPoint(grid, tt.index, 0)
+			require.True(t, ok)
+
 			assert.Equal(t, tt.expectedLat, lat, "Latitude mismatch for index %d", tt.index)
 			assert.Equal(t, tt.expectedLon, lon, "Longitude mismatch for index %d", tt.index)
 		})
@@ -162,7 +165,8 @@ func TestGridRoundTrip(t *testing.T) {
 	// Test conversion from lat/lon to index and back
 	originalLat, originalLon := 32.5, 112.5
 	index := grids.GridIndex(grid, originalLat, originalLon, 0)
-	recoveredLat, recoveredLon := grids.GridPoint(grid, index, 0)
+	recoveredLat, recoveredLon, ok := grids.GridPoint(grid, index, 0)
+	require.True(t, ok)
 
 	assert.Equal(t, originalLat, recoveredLat, "Latitude should remain unchanged")
 	assert.Equal(t, originalLon, recoveredLon, "Longitude should remain unchanged")
