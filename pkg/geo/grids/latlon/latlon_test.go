@@ -177,3 +177,56 @@ func BenchmarkNewLatLonGrid(b *testing.B) {
 		})
 	}
 }
+
+func TestLatLonIsSphere(t *testing.T) {
+	t.Run("Not Sphere", func(t *testing.T) {
+		grid := latlon.NewLatLonGrid(-90, 90, 0, 180, 0.5, 0.5)
+		assert.False(t, grid.IsSphere())
+	})
+
+	t.Run("Sphere", func(t *testing.T) {
+		grid := latlon.NewLatLonGrid(-90, 90, 0, 359.75, 0.25, 0.25)
+		assert.True(t, grid.IsSphere())
+	})
+}
+
+func TestLatLonGetNearestIndex(t *testing.T) {
+	grid := latlon.NewLatLonGrid(-90, 90, 0, 359.75, 0.25, 0.25)
+
+	tests := []struct {
+		name   string
+		lat    float64
+		lon    float64
+		latIdx int
+		lonIdx int
+	}{
+		{name: "Center", lat: 32.5, lon: 112.5, latIdx: 230, lonIdx: 450},
+		{name: "Top", lat: 90, lon: 112.5, latIdx: 0, lonIdx: 450},
+		{name: "Bottom", lat: -90, lon: 112.5, latIdx: 720, lonIdx: 450},
+		{name: "Left", lat: 32.5, lon: 0, latIdx: 230, lonIdx: 0},
+		{name: "Right", lat: 32.5, lon: 359.75, latIdx: 230, lonIdx: 1439},
+		{name: "Top Left", lat: 90, lon: 0, latIdx: 0, lonIdx: 0},
+		{name: "90W_Meridian", lat: 0, lon: -90, latIdx: 360, lonIdx: 1080},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			latIdx, lonIdx := grid.GetNearestIndex(tt.lat, tt.lon)
+
+			assert.Equal(t, tt.latIdx, latIdx)
+			assert.Equal(t, tt.lonIdx, lonIdx)
+
+			latIdx, lonIdx = grid.GuessNearestIndex(tt.lat, tt.lon)
+			assert.Equal(t, tt.latIdx, latIdx)
+			assert.Equal(t, tt.lonIdx, lonIdx)
+		})
+	}
+}
+
+func BenchmarkGuessNearestIndex(b *testing.B) {
+	grid := latlon.NewLatLonGrid(-90, 90, 0, 359.75, 0.25, 0.25)
+
+	for i := 0; i < b.N; i++ {
+		grid.GuessNearestIndex(32.5, 112.5)
+	}
+}

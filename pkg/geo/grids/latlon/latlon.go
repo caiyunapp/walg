@@ -22,6 +22,7 @@ type latLon struct {
 	lonCount int       // 经度方向的网格数量
 	lats     []float64 // 缓存的纬度值
 	lons     []float64 // 缓存的经度值
+	isSphere bool      // 是否是球状的
 }
 
 var latLonCache = make(map[string]*latLon)
@@ -70,6 +71,14 @@ func newLatLonGrid(minLat, maxLat, minLon, maxLon, latStep, lonStep float64) *la
 		ll.lons[i] = ll.minLon + float64(i)*lonStep
 	}
 
+	isSphere := func() bool {
+		maxLon := int(maxLon * 1e6)
+		minLon := int(minLon * 1e6)
+		return maxLon+int(lonStep*1e6) == minLon+360*1e6
+	}()
+
+	ll.isSphere = isSphere
+
 	return ll
 }
 
@@ -86,6 +95,10 @@ func (g *latLon) Latitudes() []float64 {
 // Longitudes 返回所有经度值
 func (g *latLon) Longitudes() []float64 {
 	return g.lons
+}
+
+func (g *latLon) IsSphere() bool {
+	return g.isSphere
 }
 
 // normalizeLat 将一个纬度值映射到指定区间 [minVal, maxVal]
@@ -110,14 +123,14 @@ func (g *latLon) normalizeLat(minVal, maxVal, val float64) float64 {
 }
 
 // normalizeLon 将一个经度值映射到指定区间 [minVal, maxVal]
-func (g *latLon) normalizeLon(minVal, maxVal, val float64, sphere bool) float64 {
+func (g *latLon) normalizeLon(minVal, maxVal, val float64) float64 {
 	intMinVal := int(minVal * 1e6)
 	intMaxVal := int(maxVal * 1e6)
 	intVal := int(val * 1e6)
 	interval := intMaxVal - intMinVal
 
 	// 处理球状的经度
-	if sphere {
+	if g.isSphere {
 		// 先将经度标准化到 [0, 360) 范围内
 		normalized := intVal
 		for normalized < 0 {
@@ -155,15 +168,10 @@ func (g *latLon) normalizeLon(minVal, maxVal, val float64, sphere bool) float64 
 	return float64(normalized) / 1e6
 }
 
+// 修改 GetNearestIndex 方法
 func (g *latLon) GetNearestIndex(lat, lon float64) (int, int) {
-	isSphere := func() bool {
-		maxLon := int(g.maxLon * 1e6)
-		minLon := int(g.minLon * 1e6)
-		return maxLon+int(g.lonStep*1e6) == minLon+360*1e6
-	}()
-
 	normalizedLat := g.normalizeLat(g.minLat, g.maxLat, lat)
-	normalizedLon := g.normalizeLon(g.minLon, g.maxLon, lon, isSphere)
+	normalizedLon := g.normalizeLon(g.minLon, g.maxLon, lon)
 
 	indicesLat := grids.FindNearestIndices(normalizedLat, g.lats)
 	indicesLon := grids.FindNearestIndices(normalizedLon, g.lons)
@@ -190,14 +198,8 @@ func (g *latLon) GetNearestIndex(lat, lon float64) (int, int) {
 }
 
 func (g *latLon) GuessNearestIndex(lat, lon float64) (int, int) {
-	isSphere := func() bool {
-		maxLon := int(g.maxLon * 1e6)
-		minLon := int(g.minLon * 1e6)
-		return maxLon+int(g.lonStep*1e6) == minLon+360*1e6
-	}()
-
 	normalizedLat := g.normalizeLat(g.minLat, g.maxLat, lat)
-	normalizedLon := g.normalizeLon(g.minLon, g.maxLon, lon, isSphere)
+	normalizedLon := g.normalizeLon(g.minLon, g.maxLon, lon)
 
 	indicesLat := grids.FindNearestIndices(normalizedLat, g.lats)
 	indicesLon := grids.FindNearestIndices(normalizedLon, g.lons)
