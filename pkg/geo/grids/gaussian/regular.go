@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"math"
+	"sync"
 
 	"github.com/scorix/walg/pkg/geo/distance"
 	"github.com/scorix/walg/pkg/geo/grids"
@@ -18,11 +19,15 @@ type regular struct {
 
 var regularCache = make(map[int]*regular)
 var regularCacheGroup singleflight.Group
+var regularCacheLock sync.Mutex
 
 func NewRegular(n int) *regular {
 	name := fmt.Sprintf("F%d", n)
 
 	r, _, _ := regularCacheGroup.Do(name, func() (any, error) {
+		regularCacheLock.Lock()
+		defer regularCacheLock.Unlock()
+
 		if cached, ok := regularCache[n]; ok {
 			return cached, nil
 		}

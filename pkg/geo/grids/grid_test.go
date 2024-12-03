@@ -28,7 +28,8 @@ func runGridTests(t *testing.T, grid grids.Grid, tests []gridTestCase, mode grid
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			idx := grids.GridIndex(grid, tt.lat, tt.lon, mode)
-			recoveredLat, recoveredLon := grids.GridPoint(grid, idx, mode)
+			recoveredLat, recoveredLon, ok := grids.GridPoint(grid, idx, mode)
+			require.True(t, ok)
 
 			actualDist := distance.VincentyIterations(tt.lat, tt.lon, recoveredLat, recoveredLon, iterations)
 			t.Logf("Actual #%d index: (%.3f, %.3f), dist: %fkm from (%.3f, %.3f)",
@@ -36,14 +37,18 @@ func runGridTests(t *testing.T, grid grids.Grid, tests []gridTestCase, mode grid
 
 			nearestIdxs := grids.NewNearestGrids(grid).NearestGrids(tt.lat, tt.lon, mode)
 			for i, nearIdx := range nearestIdxs {
-				nearLat, nearLon := grids.GridPoint(grid, nearIdx, mode)
+				nearLat, nearLon, ok := grids.GridPoint(grid, nearIdx, mode)
+				require.True(t, ok)
+
 				dist := distance.VincentyIterations(tt.lat, tt.lon, nearLat, nearLon, iterations)
 				t.Logf("Nearest %d index #%d: (%.3f, %.3f), dist: %fkm from (%.3f, %.3f)",
 					i, nearIdx, nearLat, nearLon, dist, tt.lat, tt.lon)
 				assert.GreaterOrEqual(t, dist, actualDist)
 			}
 
-			expectedLat, expectedLon := grids.GridPoint(grid, tt.expectedIdx, mode)
+			expectedLat, expectedLon, ok := grids.GridPoint(grid, tt.expectedIdx, mode)
+			require.True(t, ok)
+
 			expectedDist := distance.VincentyIterations(tt.lat, tt.lon, expectedLat, expectedLon, iterations)
 			t.Logf("Expected #%d index: (%.3f, %.3f), dist: %f from (%.3f, %.3f)",
 				tt.expectedIdx, expectedLat, expectedLon, expectedDist, tt.lat, tt.lon)
@@ -64,7 +69,9 @@ func runGridTests(t *testing.T, grid grids.Grid, tests []gridTestCase, mode grid
 
 			// guess
 			guessIdx := grids.GuessGridIndex(grid, tt.lat, tt.lon, mode)
-			guessLat, guessLon := grids.GridPoint(grid, guessIdx, mode)
+			guessLat, guessLon, ok := grids.GridPoint(grid, guessIdx, mode)
+			require.True(t, ok)
+
 			guessDist := distance.VincentyIterations(tt.lat, tt.lon, guessLat, guessLon, iterations)
 			t.Logf("Guess index #%d: (%.3f, %.3f), dist: %f from (%.3f, %.3f)",
 				guessIdx, guessLat, guessLon, guessDist, tt.lat, tt.lon)
