@@ -60,26 +60,33 @@ func newLatLonGrid(minLat, maxLat, minLon, maxLon, latStep, lonStep float64) *la
 		lonStep: lonStep,
 	}
 
+	intMaxLat := int(math.Round(maxLat * 1e6))
+	intMinLat := int(math.Round(minLat * 1e6))
+	intMaxLon := int(math.Round(maxLon * 1e6))
+	intMinLon := int(math.Round(minLon * 1e6))
+	intLatStep := int(math.Round(latStep * 1e6))
+	intLonStep := int(math.Round(lonStep * 1e6))
+
 	// 计算点数
-	ll.latCount = int(math.Abs(maxLat-minLat)/latStep) + 1
-	ll.lonCount = int((maxLon-minLon)/lonStep) + 1
+	ll.latCount = int(math.Round(float64(intMaxLat-intMinLat)/float64(intLatStep))) + 1
+	ll.lonCount = int(math.Round(float64(intMaxLon-intMinLon)/float64(intLonStep))) + 1
 
 	// 纬度数组总是从北到南排列
 	ll.lats = make([]float64, ll.latCount)
 	for i := 0; i < ll.latCount; i++ {
-		ll.lats[i] = ll.maxLat - float64(i)*latStep
+		ll.lats[i] = float64(intMaxLat-i*intLatStep) / 1e6
 	}
 
 	// 经度数组总是从西到东排列
 	ll.lons = make([]float64, ll.lonCount)
 	for i := 0; i < ll.lonCount; i++ {
-		ll.lons[i] = ll.minLon + float64(i)*lonStep
+		ll.lons[i] = float64(intMinLon+i*intLonStep) / 1e6
 	}
 
 	isSphere := func() bool {
-		maxLon := int(maxLon * 1e6)
-		minLon := int(minLon * 1e6)
-		return maxLon+int(lonStep*1e6) == minLon+360*1e6
+		maxLon := int(math.Round(maxLon * 1e6))
+		minLon := int(math.Round(minLon * 1e6))
+		return maxLon+int(math.Round(lonStep*1e6)) == minLon+360*1e6
 	}()
 
 	ll.isSphere = isSphere
