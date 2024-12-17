@@ -159,6 +159,45 @@ func TestGridPoint(t *testing.T) {
 	}
 }
 
+func TestGridPoint_Wave0p16(t *testing.T) {
+	grid := latlon.NewLatLonGrid(-15.0, 52.5, 0.0, 359.833, 0.166667, 0.166667)
+	assert.Equal(t, 406, len(grid.Latitudes()))
+	assert.Equal(t, 2160, len(grid.Longitudes()))
+	assert.Equal(t, 876960, grid.Size())
+
+	tests := []struct {
+		lat, lon float64
+		index    int
+	}{
+		{lat: 52.5, lon: 0.0, index: 0},
+		{lat: 52.5, lon: 0.166667, index: 1},
+		{lat: 52.5, lon: 0.333333, index: 2},
+		{lat: 52.5, lon: 0.5, index: 3},
+		{lat: 52.5, lon: 0.666667, index: 4},
+		{lat: 52.5, lon: 0.833333, index: 5},
+		{lat: 52.5, lon: 1, index: 6},
+		{lat: 52.5, lon: 2, index: 12},
+		{lat: 52.5, lon: 3, index: 18},
+		{lat: 52.5, lon: 359, index: 359 * 6},
+		{lat: 52.5, lon: 359.166667, index: 359*6 + 1},
+		{lat: 52.5, lon: 359.333333, index: 359*6 + 2},
+		{lat: 52.5, lon: 359.5, index: 359*6 + 3},
+		{lat: 52.5, lon: 359.666667, index: 359*6 + 4},
+		{lat: 52.5, lon: 359.833333, index: 359*6 + 5},
+		{lat: -15.0, lon: 0, index: 874800},
+		{lat: -15.0, lon: 359.833, index: 876959},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("lat=%.2f, lon=%.2f", tt.lat, tt.lon), func(t *testing.T) {
+			lat, lon, ok := grids.GridPoint(grid, tt.index, 0)
+			assert.InDelta(t, tt.lat, lat, 1e-2)
+			assert.InDelta(t, tt.lon, lon, 1e-2)
+			assert.True(t, ok)
+		})
+	}
+}
+
 func TestGridRoundTrip(t *testing.T) {
 	grid := latlon.NewLatLonGrid(30.0, 35.0, 110.0, 115.0, 0.5, 0.5)
 
