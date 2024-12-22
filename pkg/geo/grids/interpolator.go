@@ -1,8 +1,7 @@
-package interpolation
+package grids
 
 import (
-	"github.com/scorix/walg/pkg/geo/grids"
-	"github.com/scorix/walg/pkg/interpolation/interpolators"
+	"github.com/scorix/walg/pkg/geo/grids/interpolators"
 )
 
 // ValueReader 定义了获取网格数据的接口
@@ -14,13 +13,13 @@ type ValueReader interface {
 // GridInterpolator 网格插值器
 type GridInterpolator struct {
 	reader       ValueReader
-	grid         grids.Grid
-	scanningMode grids.ScanMode
+	grid         Grid
+	scanningMode ScanMode
 	interpolator interpolators.Interpolator
 }
 
 // NewGridInterpolator 创建新的网格插值器
-func NewGridInterpolator(reader ValueReader, grid grids.Grid, scanningMode grids.ScanMode, interpolator interpolators.Interpolator) *GridInterpolator {
+func NewGridInterpolator(reader ValueReader, grid Grid, scanningMode ScanMode, interpolator interpolators.Interpolator) *GridInterpolator {
 	if interpolator == nil {
 		interpolator = &interpolators.BilinearInterpolator{} // 默认使用双线性插值
 	}
@@ -39,10 +38,10 @@ func (g *GridInterpolator) InterpolateAt(timeStep int, lat, lon float64) (float6
 
 	// 获取四个相邻点的网格索引
 	indices := []int{
-		grids.GridIndexFromIndices(g.grid, latIdx, lonIdx, g.scanningMode),
-		grids.GridIndexFromIndices(g.grid, latIdx, lonIdx+1, g.scanningMode),
-		grids.GridIndexFromIndices(g.grid, latIdx+1, lonIdx, g.scanningMode),
-		grids.GridIndexFromIndices(g.grid, latIdx+1, lonIdx+1, g.scanningMode),
+		GridIndexFromIndices(g.grid, latIdx, lonIdx, g.scanningMode),
+		GridIndexFromIndices(g.grid, latIdx, lonIdx+1, g.scanningMode),
+		GridIndexFromIndices(g.grid, latIdx+1, lonIdx, g.scanningMode),
+		GridIndexFromIndices(g.grid, latIdx+1, lonIdx+1, g.scanningMode),
 	}
 
 	// 获取相邻点的值

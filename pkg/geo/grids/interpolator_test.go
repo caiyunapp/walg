@@ -1,11 +1,11 @@
-package interpolation
+package grids_test
 
 import (
 	"fmt"
 	"testing"
 
 	"github.com/scorix/walg/pkg/geo/grids"
-	"github.com/scorix/walg/pkg/interpolation/interpolators"
+	"github.com/scorix/walg/pkg/geo/grids/interpolators"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -70,7 +70,7 @@ func TestGridInterpolator_InterpolateAt(t *testing.T) {
 	}
 
 	// 使用默认的双线性插值器
-	interpolator := NewGridInterpolator(reader, grid, 0, nil)
+	interpolator := grids.NewGridInterpolator(reader, grid, 0, nil)
 
 	tests := []struct {
 		name     string
@@ -141,7 +141,7 @@ func TestGridInterpolator_InterpolateAt_Error(t *testing.T) {
 	}
 
 	// 使用默认的双线性插值器
-	interpolator := NewGridInterpolator(reader, grid, 0, nil)
+	interpolator := grids.NewGridInterpolator(reader, grid, 0, nil)
 
 	tests := []struct {
 		name     string
@@ -225,7 +225,7 @@ func TestGridInterpolator_WithDifferentInterpolators(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			interpolator := NewGridInterpolator(reader, grid, tt.mode, tt.interpolator)
+			interpolator := grids.NewGridInterpolator(reader, grid, tt.mode, tt.interpolator)
 			got, err := interpolator.InterpolateAt(0, tt.lat, tt.lon)
 			assert.NoError(t, err)
 			assert.InDelta(t, tt.want, got, 0.0001)
